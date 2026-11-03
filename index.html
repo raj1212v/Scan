@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scan Log</title>
+<meta name="theme-color" content="#2f5bea">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<style>
+/* Tokens: values from replica/design/tokens.json and tokens.dark.json (role names unchanged) */
+:root{
+  --bg:#ffffff;--surface:#f5f6f8;--raised:#ffffff;--border:#e1e4e9;--border-input:#7d8591;
+  --text:#14171c;--muted:#575f6b;--accent:#2f5bea;--on-accent:#ffffff;--accent-subtle:#e8eeff;--on-accent-subtle:#1f3fa8;
+  --danger:#b42323;--success:#17704a;--warning:#8a5200;--scrim:0,0,0;
+  --r-sm:8px;--r-md:12px;--r-lg:20px;--shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.10);
+  --shadow-pop:0 12px 32px rgba(16,24,40,.16);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e1115;--surface:#171b21;--raised:#1f242c;--border:#2a313a;--border-input:#7f8895;
+  --text:#eef1f5;--muted:#a4aebb;--accent:#8aa6ff;--on-accent:#0b1226;--accent-subtle:#1c2747;--on-accent-subtle:#c3d1ff;
+  --danger:#ff8585;--success:#4fcb8f;--warning:#f0b35a;
+  --shadow:0 0 0 rgba(0,0,0,0);--shadow-pop:0 12px 32px rgba(0,0,0,.5);color-scheme:dark;}}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:400 16px/24px Inter,system-ui,-apple-system,Roboto,"Segoe UI",sans-serif;
+  -webkit-text-size-adjust:100%;overflow-x:hidden}
+#app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 8px) 16px 8px;min-height:56px}
+header h1{font-size:20px;line-height:28px;font-weight:700}
+main{flex:1;padding:8px 16px calc(88px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:16px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+h2{font-size:20px;line-height:28px;font-weight:600}
+h3{font-size:16px;line-height:24px;font-weight:600}
+.cap{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sub{font-size:14px;line-height:20px;color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow)}
+.flat{background:var(--surface);border-radius:var(--r-lg);padding:16px}
+.btn{min-height:48px;padding:0 20px;border-radius:var(--r-md);font:600 16px/1 inherit;font-family:inherit;border:1px solid transparent;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-align:center;text-decoration:none}
+.btn.primary{background:var(--accent);color:var(--on-accent)}
+.btn.secondary{background:var(--surface);color:var(--text);border-color:var(--border)}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.danger{background:var(--surface);color:var(--danger);border-color:var(--border)}
+.btn.block{width:100%}.btn.sm{min-height:40px;padding:0 16px;font-size:14px}
+.btn:active{filter:brightness(.92)}
+.btn[disabled],.btn[aria-disabled="true"]{opacity:.4;pointer-events:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iconbtn{width:48px;height:48px;border-radius:var(--r-md);border:0;background:transparent;color:var(--text);display:grid;place-items:center;cursor:pointer}
+svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.field{min-height:48px;padding:12px 16px;border:1px solid var(--border-input);border-radius:var(--r-md);background:var(--bg);color:var(--text);width:100%;font:inherit}
+.field:focus{border:2px solid var(--accent);padding:11px 15px;outline:none}
+label.l{display:block;font-size:14px;line-height:20px;font-weight:500;margin-bottom:4px}
+.banner{background:var(--surface);border-left:4px solid var(--danger);border-radius:var(--r-md);padding:12px 16px;display:flex;gap:8px;flex-direction:column}
+.banner.ok{border-left-color:var(--success)}
+.note{background:var(--accent-subtle);color:var(--on-accent-subtle);border-radius:var(--r-md);padding:12px 16px;font-size:14px;line-height:20px}
+.pill{display:inline-block;padding:4px 12px;border-radius:999px;background:var(--accent-subtle);color:var(--on-accent-subtle);font-size:14px;font-weight:600}
+.pill.sm{font-size:12px;padding:2px 8px}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--border);display:flex;justify-content:center;
+  padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav.tabs .in{display:flex;width:100%;max-width:480px}
+.tab{flex:1;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:0;background:none;
+  color:var(--muted);font:500 12px/16px inherit;font-family:inherit;cursor:pointer;position:relative}
+.tab[aria-selected="true"]{color:var(--accent)}
+.tab .dot{position:absolute;top:8px;left:calc(50% + 8px);width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.hero{text-align:center;padding:24px 16px}
+.hero .n{font-size:56px;line-height:60px;font-weight:700;font-variant-numeric:tabular-nums}
+.hero .n small{font-size:20px;color:var(--muted);font-weight:500}
+.trait .top{display:flex;justify-content:space-between;align-items:baseline}
+.trait .val{font-size:20px;line-height:28px;font-weight:600;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:999px;background:var(--border);overflow:hidden;margin:8px 0}
+.bar b{display:block;height:100%;background:var(--accent);border-radius:999px}
+.list{padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.list li{display:flex;gap:8px}
+.list svg.i{width:20px;height:20px;margin-top:2px;color:var(--accent)}
+.group{border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--bg)}
+.item{width:100%;min-height:56px;padding:8px 16px;display:flex;gap:12px;align-items:center;background:none;border:0;border-top:1px solid var(--border);color:var(--text);
+  font:inherit;text-align:left;cursor:pointer}
+.item:first-child{border-top:0}
+.box{width:24px;height:24px;border-radius:var(--r-sm);border:2px solid var(--border-input);flex:none;display:grid;place-items:center}
+.item[aria-checked="true"] .box{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.item[aria-checked="true"] .tt{color:var(--muted)}
+.box svg{width:14px;height:14px;stroke-width:3;display:none}
+.item[aria-checked="true"] .box svg{display:block}
+.item .t{flex:1;min-width:0}.item .t b{display:block;font-weight:500}.item .t span{font-size:14px;line-height:20px;color:var(--muted)}
+.xp{font-size:12px;font-weight:600;background:var(--accent-subtle);color:var(--on-accent-subtle);border-radius:999px;padding:2px 8px}
+.bub{max-width:88%;padding:12px 16px;border-radius:var(--r-lg);white-space:pre-wrap;overflow-wrap:anywhere}
+.bub.u{align-self:flex-end;background:var(--accent);color:var(--on-accent);border-bottom-right-radius:var(--r-sm)}
+.bub.a{align-self:flex-start;background:var(--surface);border-bottom-left-radius:var(--r-sm)}
+.chat{display:flex;flex-direction:column;gap:8px}
+.linkbtn{background:none;border:0;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;padding:8px 0;text-decoration:underline;align-self:flex-start}
+.thumb{width:56px;height:56px;border-radius:var(--r-md);object-fit:cover;background:var(--surface);flex:none}
+.photo{width:100%;max-height:300px;object-fit:cover;border-radius:var(--r-lg);background:var(--surface)}
+.empty{text-align:center;padding:32px 16px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.empty svg.i{width:40px;height:40px;color:var(--muted)}
+.spin{width:20px;height:20px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:s .8s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px));max-width:448px;margin:0 auto;background:var(--text);color:var(--bg);
+  border-radius:var(--r-md);padding:12px 16px;box-shadow:var(--shadow-pop);z-index:9}
+.skin3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.skin3 .card{padding:12px}
+.skin3 .v{font-size:20px;line-height:28px;font-weight:600;font-variant-numeric:tabular-nums}
+svg.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:11px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="live" class="sr" aria-live="polite"></div>
+<script>
+'use strict';
+/* =====================================================================
+   Scan Log: a personal face and skin scan journal. One file, no build.
+   Photos go to Google Gemini with YOUR key; everything else stays on this device.
+   ===================================================================== */
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+const round5 = n => Math.round(n * 2) / 2;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+class AppError extends Error { constructor(code, status = 0, msg = '') { super(code); this.code = code; this.status = status; this.msg = msg; } }
+
+const ICON = {
+  camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  check: '<path d="M5 12l5 5 9-11"/>',
+  target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>',
+  chart: '<path d="M4 19V5M4 19h16M8 15l4-4 3 3 5-6"/>',
+  chat: '<path d="M4 5h16v11H9l-5 4z"/>',
+  gear: '<path d="M4 7h9M19 7h1M4 17h1M11 17h9"/><circle cx="16" cy="7" r="2.5"/><circle cx="8" cy="17" r="2.5"/>',
+  back: '<path d="M15 5l-7 7 7 7"/>',
+  spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
+  alert: '<circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/>',
+  star: '<path d="M12 2l3 6 6 .9-4.5 4.4 1 6.2L12 16.6 6.5 19.5l1-6.2L3 8.9 9 8z"/>',
+  flame: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M9 13l2 2 4-4"/>',
+  send: '<path d="M12 19V5M5 12l7-7 7 7"/>',
+};
+const ic = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+
+/* ---------- storage: IndexedDB with an in-memory fallback ---------- */
+const mem = new Map(); let idb = null, persistent = false;
+async function openDb() {
+  try {
+    idb = await new Promise((res, rej) => {
+      const r = indexedDB.open('scanlog', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('blocked'));
+    });
+    persistent = true;
+  } catch (e) { idb = null; persistent = false; }
+}
+const tx = (mode, fn) => new Promise((res, rej) => {
+  const t = idb.transaction('kv', mode); const out = fn(t.objectStore('kv'));
+  t.oncomplete = () => res(out && out.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+});
+const kvGet = k => idb ? tx('readonly', s => s.get(k)) : Promise.resolve(mem.get(k));
+const kvSet = (k, v) => idb ? tx('readwrite', s => { s.put(v, k); }) : (mem.set(k, v), Promise.resolve());
+const kvDel = k => idb ? tx('readwrite', s => { s.delete(k); }) : (mem.delete(k), Promise.resolve());
+const kvClear = () => idb ? tx('readwrite', s => { s.clear(); }) : (mem.clear(), Promise.resolve());
+const LS = {
+  get(k) { try { return localStorage.getItem(k); } catch { return mem.get('ls:' + k) ?? null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { mem.set('ls:' + k, v); } },
+  del(k) { try { localStorage.removeItem(k); } catch { mem.delete('ls:' + k); } },
+};
+
+/* ---------- state ---------- */
+let settings = { key: '', model: '', goals: '', skin: '' };
+const blankData = () => ({ scans: [], checks: {}, planStatus: {}, quests: {}, progress: { xp: 0, streak: 0, longest: 0, last: null }, chat: [] });
+let data = blankData();
+const photos = {}, thumbs = {};
+let ui = { tab: 'scan', view: null, viewId: null, confirm: null, flow: { front: null, side: null, busy: false, step: '', error: null, showSide: false },
+  chat: { busy: false, error: null }, settings: { msg: null, checking: false, show: false } };
+
+const saveData = () => kvSet('data', data);
+const saveSettings = () => LS.set('scanlog.settings', JSON.stringify(settings));
+
+/* ---------- pure logic (also exposed for tests) ---------- */
+const TRAITS = [['harmony', 'Harmony'], ['angularity', 'Angularity'], ['dimorphism', 'Dimorphism'], ['features', 'Features'],
+  ['symmetry', 'Symmetry'], ['skin', 'Skin'], ['side_profile', 'Side profile']];
+const PROBLEMS = {
+  no_face: 'I could not find a face in that photo. Face the camera with your whole face in frame.',
+  multiple_faces: 'There is more than one face in the photo. Try again with only you in it.',
+  too_dark: 'That photo is too dark. Face a window or a bright light and try again.',
+  too_blurry: 'That photo is too blurry. Hold still, wipe the lens and try again.',
+  face_cropped: 'Part of your face is cut off. Step back so your whole face fits in the frame.',
+  other: 'I could not use that photo. Try a clear, well-lit photo facing the camera.',
+};
+const pad = n => String(n).padStart(2, '0');
+const dayKey = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+function addDays(key, n) { const [y, m, d] = key.split('-').map(Number); return dayKey(new Date(y, m - 1, d + n)); }
+const LEVELS = [0, 100, 300, 700, 1500];
+const levelFor = xp => { let l = 1; LEVELS.forEach((t, i) => { if (xp >= t) l = i + 1; }); return l; };
+const nextLevelAt = xp => LEVELS.find(t => t > xp) ?? null;
+const scoreWord = v => v == null ? '' : v < 4 ? 'Room to grow' : v < 7 ? 'Solid' : 'Strong';
+const fmt = v => v == null ? '–' : Number(v).toFixed(1);
+function applyActivity(p, today, gain) {
+  const q = { ...p }; q.xp += gain;
+  if (q.last !== today) { q.streak = (q.last && addDays(q.last, 1) === today) ? q.streak + 1 : 1; q.longest = Math.max(q.longest, q.streak); q.last = today; }
+  return q;
+}
+const currentStreak = (p, today) => (p.last === today || (p.last && addDays(p.last, 1) === today)) ? p.streak : 0;
+function ensureQuests(d, scan, today) {
+  if (!scan) return false;
+  const ex = d.quests[today];
+  if (ex && ex.length && (ex.every(q => q.planKey.startsWith(scan.id + ':')) || ex.some(q => q.done))) return false;
+  const todo = scan.plan.map((p, i) => ({ ...p, key: `${scan.id}:p:${i}` })).filter(p => (d.planStatus[p.key] || 'todo') === 'todo').slice(0, 3);
+  d.quests[today] = todo.map(p => ({ id: uid(), planKey: p.key, title: p.title, xp: 10, done: false }));
+  return true;
+}
+function completeQuest(d, id, today) {
+  const q = (d.quests[today] || []).find(x => x.id === id);
+  if (!q || q.done) return false;
+  q.done = true; d.planStatus[q.planKey] = 'done'; d.progress = applyActivity(d.progress, today, q.xp);
+  return true;
+}
+function pickModel(list) {
+  const ver = n => { const m = n.match(/gemini-(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
+  const ok = (list || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /^models\/gemini-/.test(m.name) &&
+    /flash/.test(m.name) && !/(lite|image|tts|live|audio|embedding|robotics|computer|thinking|exp|vision)/.test(m.name));
+  ok.sort((a, b) => (/preview/.test(a.name) - /preview/.test(b.name)) || ver(b.name) - ver(a.name) || a.name.length - b.name.length);
+  return ok[0] ? ok[0].name.replace(/^models\//, '') : null;
+}
+function parseResult(text, hadSide) {
+  let t = String(text || '').trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim(), j;
+  try { j = JSON.parse(t); } catch { const m = t.match(/\{[\s\S]*\}/); if (!m) throw new AppError('badjson'); try { j = JSON.parse(m[0]); } catch { throw new AppError('badjson'); } }
+  if (!j || typeof j !== 'object') throw new AppError('badjson');
+  if (j.photo_ok === false) throw new AppError('rejected', 0, PROBLEMS[j.problem] ? j.problem : 'other');
+  const num = v => (typeof v === 'number' && isFinite(v)) ? clamp(round5(v), 0, 10) : null;
+  const str = (v, n) => String(v ?? '').slice(0, n);
+  const scores = {}, reasons = {};
+  TRAITS.forEach(([k]) => { scores[k] = num(j.scores && j.scores[k]); reasons[k] = str(j.reasons && j.reasons[k], 240); });
+  if (!hadSide) scores.side_profile = null;
+  if (TRAITS.filter(([k]) => k !== 'side_profile').some(([k]) => scores[k] === null)) throw new AppError('badjson');
+  const list = (a, n) => Array.isArray(a) ? a.map(x => str(x, 160)).filter(Boolean).slice(0, n) : [];
+  const steps = (a, n) => Array.isArray(a) ? a.map(s => ({ title: str(s && s.title, 80), detail: str(s && s.detail, 200) })).filter(s => s.title).slice(0, n) : [];
+  const verdict = { strengths: list(j.verdict && j.verdict.strengths, 5), work_on: list(j.verdict && j.verdict.work_on, 5) };
+  const sk = j.skin_read || {};
+  const skin = {}; ['clarity', 'texture', 'dark_circles'].forEach(k => { skin[k] = { score: num(sk[k] && sk[k].score), note: str(sk[k] && sk[k].note, 160) }; });
+  const routine = { am: steps(j.routine && j.routine.am, 6), pm: steps(j.routine && j.routine.pm, 6) };
+  const plan = steps(j.plan, 8);
+  if (!verdict.strengths.length || !verdict.work_on.length || routine.am.length < 2 || routine.pm.length < 2 || plan.length < 3) throw new AppError('badjson');
+  const vals = TRAITS.map(([k]) => scores[k]).filter(v => v !== null);
+  const overall = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 10) / 10;
+  return { scores, reasons, overall, verdict, skin, routine, plan };
+}
+const PROMPT_VERSION = 'v1';
+function buildPrompt(hadSide, s) {
+  return `You are the analysis engine of a personal grooming and skin-care journal. Look at the attached photo(s). The first is a front-facing photo. ${hadSide ? 'The second is a side (profile) view.' : 'There is no side photo.'} Give a cosmetic, opinion-style read of the visible face and skin. This is self-tracking, not medical advice: never diagnose, never name a medical condition, never estimate age, and never say who the person looks like.
+
+First decide whether the front photo can be scored. It must show exactly one clear, mostly front-facing human face, reasonably lit and in focus, with the whole face in frame. If not, set photo_ok to false, set problem to the main reason, and fill every other field with empty defaults.
+
+Score each trait from 0 to 10 in steps of 0.5. Most adults land between 4 and 7. Use the full range honestly and score the same face the same way every time. Traits: harmony (how well the features fit together overall); angularity (definition of the jaw, cheekbones and brow line); dimorphism (how strongly the features read as typically masculine or feminine; higher means more pronounced, neither is better); features (shape and balance of the eyes, nose and lips); symmetry (left-right balance); skin (clarity, evenness and texture of the visible skin); side_profile (only when a side photo is attached: the forehead, nose, lips and chin line and the jaw; otherwise null).
+
+For every trait write a reason of at most 20 words. Be specific, kind and neutral. Never use words such as ugly, bad, poor, unattractive or flawed. Describe what is visible and what could change.
+
+Also return: verdict (2 to 4 strengths and 2 to 4 things worth working on, each under 14 words, focused on things that can change: skin care, grooming, hair, posture, sleep, hydration); skin_read (clarity, texture and dark_circles, each with a 0 to 10 score and a note under 14 words); routine (morning and evening skin-care steps, 3 to 5 each, simple and inexpensive, each with a short title and one sentence of detail; stick to common over-the-counter basics and tell the user to patch test anything new); plan (5 to 7 daily or weekly habit items for the next month, each with a title and one sentence of detail).
+
+User context, may be empty. Goals: ${s.goals || 'none given'}. Skin type: ${s.skin || 'unknown'}.
+Return only JSON that matches the schema.`;
+}
+const STR = { type: 'STRING' }, NUM = { type: 'NUMBER' }, NUMN = { type: 'NUMBER', nullable: true };
+const stepSchema = { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: STR, detail: STR }, required: ['title', 'detail'] } };
+const traitObj = t => ({ type: 'OBJECT', properties: Object.fromEntries(TRAITS.map(([k]) => [k, t])), required: TRAITS.map(([k]) => k) });
+const skinObj = { type: 'OBJECT', properties: { score: NUM, note: STR }, required: ['score', 'note'] };
+const SCHEMA = { type: 'OBJECT', properties: {
+  photo_ok: { type: 'BOOLEAN' }, problem: { type: 'STRING', enum: ['none', 'no_face', 'multiple_faces', 'too_dark', 'too_blurry', 'face_cropped', 'other'] },
+  scores: traitObj(NUMN), reasons: traitObj(STR),
+  verdict: { type: 'OBJECT', properties: { strengths: { type: 'ARRAY', items: STR }, work_on: { type: 'ARRAY', items: STR } }, required: ['strengths', 'work_on'] },
+  skin_read: { type: 'OBJECT', properties: { clarity: skinObj, texture: skinObj, dark_circles: skinObj }, required: ['clarity', 'texture', 'dark_circles'] },
+  routine: { type: 'OBJECT', properties: { am: stepSchema, pm: stepSchema }, required: ['am', 'pm'] }, plan: stepSchema },
+  required: ['photo_ok', 'problem', 'scores', 'reasons', 'verdict', 'skin_read', 'routine', 'plan'] };
+
+/* ---------- Gemini client ---------- */
+const API = 'https://generativelanguage.googleapis.com/v1beta';
+async function gfetch(path, body) {
+  if (!settings.key) throw new AppError('nokey');
+  let res;
+  try {
+    res = await fetch(API + path, { method: body ? 'POST' : 'GET', headers: { 'x-goog-api-key': settings.key, ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  } catch (e) { throw new AppError('network'); }
+  if (!res.ok) { let msg = ''; try { msg = (await res.json()).error?.message || ''; } catch { } throw new AppError('http', res.status, msg); }
+  return res.json();
+}
+async function ensureModel(force) {
+  if (settings.model && !force) return settings.model;
+  const out = await gfetch('/models?pageSize=200');
+  const m = pickModel(out.models);
+  if (!m) throw new AppError('nomodel');
+  settings.model = m; saveSettings(); return m;
+}
+async function generate(body) {
+  let model = await ensureModel(false), triedModel = false, triedPlain = false, triedRetry = false;
+  for (;;) {
+    try {
+      const out = await gfetch(`/models/${model}:generateContent`, body);
+      const txt = (out.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+      if (!txt) { const why = out.promptFeedback?.blockReason || out.candidates?.[0]?.finishReason; throw new AppError('blocked', 0, why || ''); }
+      return txt;
+    } catch (e) {
+      if (!(e instanceof AppError) || e.code !== 'http') throw e;
+      if (e.status === 404 && !triedModel) { triedModel = true; settings.model = ''; model = await ensureModel(true); continue; }
+      if (e.status === 400 && body.generationConfig?.responseSchema && !triedPlain && /schema|response/i.test(e.msg)) {
+        triedPlain = true; delete body.generationConfig.responseSchema; continue; }
+      if (e.status >= 500 && !triedRetry) { triedRetry = true; await sleep(1500); continue; }
+      throw e;
+    }
+  }
+}
+function explain(e) {
+  if (!(e instanceof AppError)) return 'Something went wrong. Please try again.';
+  switch (e.code) {
+    case 'nokey': return 'Add your Gemini key in Settings first.';
+    case 'network': return 'No connection to Google. Check your internet and try again.';
+    case 'rejected': return PROBLEMS[e.msg] || PROBLEMS.other;
+    case 'badjson': return 'The AI sent back an answer I could not read. Tap Try again.';
+    case 'blocked': return 'Google declined to analyse this photo. Try a different, well-lit photo.';
+    case 'nomodel': return 'Your key works but no suitable Gemini model was found. Type a model name in Settings.';
+    case 'http':
+      if (e.status === 429) return 'You have hit the free limit for now. Wait a minute, or try again tomorrow.';
+      if (e.status === 400 && /API key/i.test(e.msg)) return 'Google says this key is not valid. Check it in Settings.';
+      if (e.status === 401 || e.status === 403) return 'Google rejected the key. Check it in Settings, and that the Gemini API is allowed for it.';
+      if (e.status === 404) return 'That model name was not found. Clear the model in Settings to pick one automatically.';
+      if (e.status >= 500) return 'Google is having trouble right now. Try again in a moment.';
+      return 'Google returned an error' + (e.msg ? ': ' + e.msg.slice(0, 140) : '.');
+  }
+  return 'Something went wrong. Please try again.';
+}
+
+/* ---------- photos ---------- */
+async function decode(file) {
+  try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+  catch { return await new Promise((res, rej) => { const u = URL.createObjectURL(file), im = new Image(); im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = () => rej(new Error('decode')); im.src = u; }); }
+}
+async function prepare(file) {
+  const im = await decode(file), w = im.width || im.naturalWidth, h = im.height || im.naturalHeight;
+  if (!w || !h) throw new Error('empty');
+  const draw = max => { const sc = Math.min(1, max / Math.max(w, h)), c = document.createElement('canvas'); c.width = Math.round(w * sc); c.height = Math.round(h * sc); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.82); };
+  return { full: draw(1024), thumb: draw(160) };
+}
+
+/* ---------- actions ---------- */
+const latest = () => data.scans[data.scans.length - 1] || null;
+const scanById = id => data.scans.find(s => s.id === id);
+async function runScan() {
+  const f = ui.flow; if (f.busy || !f.front) return;
+  f.busy = true; f.error = null; f.step = 'Reading your photo…'; render();
+  try {
+    const hadSide = !!f.side;
+    const parts = [{ text: buildPrompt(hadSide, settings) }, { inline_data: { mime_type: 'image/jpeg', data: f.front.full.split(',')[1] } }];
+    if (hadSide) parts.push({ inline_data: { mime_type: 'image/jpeg', data: f.side.full.split(',')[1] } });
+    f.step = 'Scoring and building your routine. This takes about 10 to 20 seconds.'; render();
+    const text = await generate({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0, maxOutputTokens: 8192, responseMimeType: 'application/json', responseSchema: SCHEMA } });
+    const r = parseResult(text, hadSide);
+    const scan = { id: uid(), t: Date.now(), hadSide, ...r, model: settings.model, pv: PROMPT_VERSION };
+    photos[scan.id] = f.front.full; thumbs[scan.id] = f.front.thumb;
+    await kvSet('photo:' + scan.id, f.front.full); await kvSet('thumb:' + scan.id, f.front.thumb);
+    data.scans.push(scan); ensureQuests(data, scan, dayKey()); await saveData();
+    ui.flow = { front: null, side: null, busy: false, step: '', error: null, showSide: false };
+    ui.view = 'results'; ui.viewId = scan.id; ui.confirm = null;
+  } catch (e) { f.busy = false; f.error = explain(e); if (e.code === 'rejected') { f.front = null; } }
+  render(); window.scrollTo(0, 0);
+}
+async function onFile(kind, file) {
+  if (!file) return;
+  try { const p = await prepare(file); ui.flow[kind] = p; ui.flow.error = null; if (kind === 'side') ui.flow.showSide = true; }
+  catch { toast('I could not read that photo. Try another one.'); }
+  render();
+}
+async function checkKey(key, model) {
+  const s = ui.settings; s.checking = true; s.msg = null; render();
+  settings.key = key; if (model !== undefined) settings.model = model; saveSettings();
+  try {
+    const out = await gfetch('/models?pageSize=200'); const picked = pickModel(out.models);
+    if (!settings.model) { if (!picked) throw new AppError('nomodel'); settings.model = picked; saveSettings(); }
+    s.msg = { ok: true, text: `Key works. Using model ${settings.model}.` };
+  } catch (e) { s.msg = { ok: false, text: explain(e) }; }
+  s.checking = false; render();
+}
+async function sendChat(text) {
+  const c = ui.chat; if (c.busy || !text.trim()) return;
+  data.chat.push({ id: uid(), role: 'user', text: text.trim().slice(0, 2000), t: Date.now() }); c.busy = true; c.error = null; await saveData(); render();
+  try {
+    const s = latest();
+    const ctx = s ? `The user's latest scan (${new Date(s.t).toDateString()}): overall ${s.overall}/10. ` + TRAITS.filter(([k]) => s.scores[k] != null).map(([k, n]) => `${n} ${s.scores[k]} (${s.reasons[k]})`).join('; ') +
+      `. Strengths: ${s.verdict.strengths.join('; ')}. Work on: ${s.verdict.work_on.join('; ')}. Skin: clarity ${s.skin.clarity.score}, texture ${s.skin.texture.score}, dark circles ${s.skin.dark_circles.score}. Routine AM: ${s.routine.am.map(x => x.title).join(', ')}. PM: ${s.routine.pm.map(x => x.title).join(', ')}.` : 'The user has not done a scan yet.';
+    const sys = `You are a friendly assistant inside a personal skin-care and grooming journal. ${ctx} Answer questions about the scan, the routine, the plan, skin care, grooming and healthy habits. Be practical, kind and concise (under 150 words unless asked for more). Never diagnose or name medical conditions; for anything that looks medical, suggest seeing a doctor or dermatologist. Never rank the user against other people or call anything ugly. If the user seems distressed about their looks, an eating disorder, or self-harm, respond warmly, say their worth is not their scores, and encourage talking to someone they trust or a professional. Stay on these topics.`;
+    const hist = data.chat.filter(m => !m.failed).slice(-14).map(m => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.text }] }));
+    const reply = await generate({ systemInstruction: { parts: [{ text: sys }] }, contents: hist, generationConfig: { temperature: 0.6, maxOutputTokens: 1024 } });
+    data.chat.push({ id: uid(), role: 'assistant', text: reply.trim(), t: Date.now() });
+  } catch (e) { c.error = explain(e); }
+  c.busy = false; await saveData(); render(); const m = $('#chat-in'); if (m) m.focus();
+}
+function toast(msg) {
+  const old = $('.toast'); if (old) old.remove();
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+function sampleJson() {
+  const sc = (a, b, c, d, e, f, g) => ({ harmony: a, angularity: b, dimorphism: c, features: d, symmetry: e, skin: f, side_profile: g });
+  const rs = k => `Sample note about ${k}. Real notes appear after a real scan.`;
+  return { photo_ok: true, problem: 'none', scores: sc(7, 6.5, 6, 7, 7.5, 5.5, null), reasons: Object.fromEntries(TRAITS.map(([k]) => [k, rs(k)])),
+    verdict: { strengths: ['Balanced proportions', 'Even skin tone on the forehead'], work_on: ['Hydration around the eyes', 'A steady evening routine'] },
+    skin_read: { clarity: { score: 6, note: 'Mostly clear with light redness near the nose.' }, texture: { score: 5.5, note: 'Slight unevenness on the cheeks.' }, dark_circles: { score: 5, note: 'Mild shadow under the eyes.' } },
+    routine: { am: [{ title: 'Rinse with lukewarm water', detail: 'Skip the scrub in the morning.' }, { title: 'Light moisturiser', detail: 'A thin layer while the skin is slightly damp.' }, { title: 'Sunscreen SPF 30+', detail: 'Reapply if you are outdoors for hours.' }],
+      pm: [{ title: 'Gentle cleanser', detail: 'Massage for 30 seconds, then rinse.' }, { title: 'Moisturiser', detail: 'Use a fragrance-free one.' }, { title: 'Eye area care', detail: 'Pat a little cream around the eyes.' }] },
+    plan: [{ title: 'Drink water through the day', detail: 'Keep a bottle in sight.' }, { title: 'Sleep 7 to 8 hours', detail: 'Same bedtime on most nights.' }, { title: 'Wash pillowcases weekly', detail: 'Cleaner contact with the skin.' },
+      { title: 'Patch test new products', detail: 'On the inner arm for 24 hours.' }, { title: 'Weekly progress photo', detail: 'Same light, same spot.' }] };
+}
+async function loadSample() {
+  const r = parseResult(JSON.stringify(sampleJson()), false);
+  const c = document.createElement('canvas'); c.width = 160; c.height = 200; const g = c.getContext('2d'); g.fillStyle = '#c9d3e8'; g.fillRect(0, 0, 160, 200); g.fillStyle = '#9fb0d4'; g.beginPath(); g.ellipse(80, 90, 42, 56, 0, 0, 7); g.fill();
+  const url = c.toDataURL('image/jpeg', 0.8);
+  const scan = { id: uid(), t: Date.now(), hadSide: false, sample: true, ...r, model: 'sample', pv: PROMPT_VERSION };
+  photos[scan.id] = url; thumbs[scan.id] = url; await kvSet('photo:' + scan.id, url); await kvSet('thumb:' + scan.id, url);
+  data.scans.push(scan); ensureQuests(data, scan, dayKey()); await saveData(); toast('Sample scan added. Delete it from its results page.'); render();
+}
+
+/* ---------- views ---------- */
+function header(title, back, hideGear) {
+  return `<header>${back ? `<button class="iconbtn" data-act="back" aria-label="Back">${ic('back')}</button>` : '<span style="width:48px"></span>'}
+  <h1>${esc(title)}</h1>${hideGear ? '<span style="width:48px"></span>' : `<button class="iconbtn" data-act="settings" aria-label="Settings">${ic('gear')}</button>`}</header>`;
+}
+const scoreCard = (name, v, reason) => `<div class="card trait"><div class="top"><h3>${esc(name)}</h3><span class="val" aria-label="${fmt(v)} out of 10">${fmt(v)}</span></div>
+  <div class="bar" aria-hidden="true"><b style="width:${(v ?? 0) * 10}%"></b></div><p class="sub">${esc(scoreWord(v))}${reason ? '. ' + esc(reason) : ''}</p></div>`;
+
+function vScan() {
+  const f = ui.flow, noKey = !settings.key;
+  const slot = (kind, label, cam) => `<label class="btn secondary block" for="f-${kind}-${cam ? 'cam' : 'gal'}">${cam ? ic('camera') : ''}${label}</label>
+    <input class="sr" type="file" accept="image/*" ${cam ? 'capture="user"' : ''} id="f-${kind}-${cam ? 'cam' : 'gal'}" data-file="${kind}">`;
+  return `${noKey ? `<div class="card stack"><h3>Add your Gemini key</h3><p class="sub">The scan runs on Google Gemini using your own key. It takes a minute to set up, once.</p>
+      <button class="btn primary block" data-act="settings">Open Settings</button></div>` : ''}
+  <div class="stack"><h2>Take a scan</h2>
+    <p class="sub">Face the camera in even light, with your whole face in the frame and nothing covering it.</p>
+    ${f.front ? `<img class="photo" alt="Your front photo, ready to analyse" src="${f.front.full}">` : ''}
+    <div class="row" style="flex-direction:column;align-items:stretch">${slot('front', f.front ? 'Retake selfie' : 'Take selfie', true)}${slot('front', 'Choose from gallery', false)}</div>
+    ${f.showSide || f.side ? `<div class="flat stack"><h3>Side photo (optional)</h3><p class="sub">Adds a side profile score.</p>
+      ${f.side ? `<img class="photo" style="max-height:200px" alt="Your side photo" src="${f.side.full}">` : ''}
+      ${slot('side', f.side ? 'Retake side photo' : 'Take side photo', true)}${slot('side', 'Choose side photo', false)}
+      ${f.side ? '<button class="btn ghost sm" data-act="rmside">Remove side photo</button>' : ''}</div>`
+      : '<button class="btn ghost" data-act="showside">+ Add a side photo (optional)</button>'}
+    ${f.error ? `<div class="banner" role="alert"><div class="row">${ic('alert')}<b>Could not finish the scan</b></div><span>${esc(f.error)}</span></div>` : ''}
+    ${f.busy ? `<div class="card row" role="status"><span class="spin"></span><span class="sub">${esc(f.step)}</span></div>`
+      : `<button class="btn primary block" data-act="analyse" ${(!f.front || noKey) ? 'disabled' : ''}>${f.error && f.front ? 'Try again' : 'Analyse photo'}</button>`}
+    <p class="sub">Your photo is sent to Google Gemini to produce the result. Nothing else leaves this phone. Cosmetic only, not medical advice.</p></div>`;
+}
+function vResults(s) {
+  if (!s) return '<div class="empty">That scan no longer exists.</div>';
+  const d = new Date(s.t), prev = data.scans[data.scans.indexOf(s) - 1];
+  return `<div class="stack">
+    <div class="row">${s.sample ? '<span class="pill sm">Sample</span>' : ''}<span class="sub">${esc(d.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }))}</span></div>
+    ${photos[s.id] ? `<img class="photo" style="max-height:240px" alt="The photo used for this scan" src="${photos[s.id]}">` : ''}
+    <div class="card hero"><div class="n">${fmt(s.overall)}<small> / 10</small></div><span class="pill">${esc(scoreWord(s.overall))}</span>
+      ${prev ? `<p class="sub" style="margin-top:12px">${Math.abs(s.overall - prev.overall) < 0.5 ? 'About the same as your last scan' : (s.overall > prev.overall ? 'Up ' : 'Down ') + Math.abs(s.overall - prev.overall).toFixed(1) + ' from your last scan'}</p>` : ''}
+      <p class="sub" style="margin-top:8px">One photo, one light, one angle. Treat this as a rough guide.</p></div>
+    ${TRAITS.map(([k, n]) => k === 'side_profile' && s.scores[k] == null ? `<div class="flat"><h3>Side profile</h3><p class="sub">Add a side photo on your next scan to score this.</p></div>` : scoreCard(n, s.scores[k], s.reasons[k])).join('')}
+    <div class="flat stack"><h2>What is working</h2><ul class="list">${s.verdict.strengths.map(x => `<li>${ic('spark')}<span>${esc(x)}</span></li>`).join('')}</ul></div>
+    <div class="flat stack"><h2>Worth working on</h2><ul class="list">${s.verdict.work_on.map(x => `<li>${ic('target')}<span>${esc(x)}</span></li>`).join('')}</ul></div>
+    <h2>Skin read</h2><div class="skin3">${[['clarity', 'Clarity'], ['texture', 'Texture'], ['dark_circles', 'Dark circles']].map(([k, n]) => `<div class="card"><span class="cap">${n}</span><div class="v">${fmt(s.skin[k].score)}</div></div>`).join('')}</div>
+    <ul class="list">${[['clarity', 'Clarity'], ['texture', 'Texture'], ['dark_circles', 'Dark circles']].map(([k, n]) => `<li><span class="sub"><b>${n}.</b> ${esc(s.skin[k].note)}</span></li>`).join('')}</ul>
+    <p class="note">Cosmetic only, not medical advice. If something on your skin worries you, see a doctor or dermatologist.</p>
+    <div class="row"><button class="btn primary" data-act="goto" data-tab="routine">See my routine</button><button class="btn secondary" data-act="goto" data-tab="chat">Ask about this scan</button></div>
+    <div>${ui.confirm === 'del:' + s.id ? `<div class="row"><button class="btn danger" data-act="delscan" data-id="${s.id}">Yes, delete this scan</button><button class="btn ghost" data-act="cancel">Keep it</button></div>`
+      : `<button class="btn danger sm" data-act="askdel" data-id="${s.id}">Delete this scan</button>`}</div></div>`;
+}
+function vRoutine() {
+  const s = latest(), today = dayKey();
+  if (!s) return `<div class="empty">${ic('check')}<h2>Your routine shows up after your first scan</h2><button class="btn primary" data-act="goto" data-tab="scan">Take a scan</button></div>`;
+  const done = new Set(data.checks[today] || []), all = [...s.routine.am.map((x, i) => ['am', i]), ...s.routine.pm.map((x, i) => ['pm', i])];
+  const grp = (tod, name) => `<div class="stack"><span class="cap">${name}</span><div class="group" role="group" aria-label="${name} steps">${s.routine[tod].map((st, i) => { const id = `${s.id}:${tod}:${i}`;
+    return `<button class="item" role="checkbox" aria-checked="${done.has(id)}" data-act="tick" data-id="${id}"><span class="box">${ic('check')}</span><span class="t"><b class="tt">${esc(st.title)}</b><span>${esc(st.detail)}</span></span></button>`; }).join('')}</div></div>`;
+  const n = all.filter(([t, i]) => done.has(`${s.id}:${t}:${i}`)).length;
+  return `<div class="stack"><div class="spread"><h2>Today's routine</h2><span class="pill">${n} of ${all.length} done</span></div>
+    <p class="sub">Built from your scan on ${esc(new Date(s.t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }))}. Patch test anything new on your inner arm first.</p>${grp('am', 'Morning')}${grp('pm', 'Evening')}</div>`;
+}
+function badges() {
+  const p = data.progress, today = dayKey(), lv = levelFor(p.xp), nx = nextLevelAt(p.xp), st = currentStreak(p, today);
+  return `<div class="row"><span class="pill">${ic('star')}&nbsp;Level ${lv}</span><span class="pill">${ic('flame')}&nbsp;${st ? st + ' day streak' : 'Start a streak today'}</span>
+    <span class="sub">${p.xp} xp${nx ? ` · ${nx - p.xp} to level ${lv + 1}` : ' · top level'}</span></div>`;
+}
+function vPlan() {
+  const s = latest(), today = dayKey();
+  if (!s) return `<div class="empty">${ic('target')}<h2>Your plan shows up after your first scan</h2><button class="btn primary" data-act="goto" data-tab="scan">Take a scan</button></div>`;
+  const qs = data.quests[today] || [];
+  return `<div class="stack"><h2>Today's quests</h2>${badges()}
+    ${qs.length ? `<div class="group">${qs.map(q => `<button class="item" role="checkbox" aria-checked="${q.done}" data-act="quest" data-id="${q.id}"><span class="box">${ic('check')}</span><span class="t"><b class="tt">${esc(q.title)}</b></span><span class="xp">+${q.xp} xp</span></button>`).join('')}</div>`
+      : '<div class="flat"><p class="sub">Nothing left today. Every plan item is done. Take a new scan for a fresh plan.</p></div>'}
+    <h2>Your plan</h2><p class="sub">A month of small habits from your latest scan. Tap an item to tick it off.</p>
+    <div class="group">${s.plan.map((p, i) => { const k = `${s.id}:p:${i}`, dn = data.planStatus[k] === 'done';
+      return `<button class="item" role="checkbox" aria-checked="${dn}" data-act="plan" data-id="${k}"><span class="box">${ic('check')}</span><span class="t"><b class="tt">${esc(p.title)}</b><span>${esc(p.detail)}</span></span></button>`; }).join('')}</div></div>`;
+}
+function chartSvg(scans) {
+  const W = 320, H = 170, L = 30, R = 12, T = 12, B = 28, v = scans.map(s => s.overall);
+  const lo = Math.floor(Math.min(...v) - 0.5), hi = Math.ceil(Math.max(...v) + 0.5), y = x => T + (H - T - B) * (1 - (x - lo) / Math.max(1, hi - lo));
+  const x = i => scans.length === 1 ? (L + W - R) / 2 : L + (W - L - R) * i / (scans.length - 1);
+  const d = x2 => new Date(x2.t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Overall score went from ${fmt(v[0])} to ${fmt(v[v.length - 1])} across ${v.length} scans">
+    ${[lo, hi].map(g => `<line x1="${L}" x2="${W - R}" y1="${y(g)}" y2="${y(g)}" stroke="var(--border)"/><text x="0" y="${y(g) + 4}">${g}</text>`).join('')}
+    ${scans.length > 1 ? `<polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${scans.map((s, i) => `${x(i)},${y(s.overall)}`).join(' ')}"/>` : ''}
+    ${scans.map((s, i) => `<circle cx="${x(i)}" cy="${y(s.overall)}" r="4" fill="var(--accent)"/>`).join('')}
+    <text x="${L}" y="${H - 8}">${d(scans[0])}</text><text x="${W - R}" y="${H - 8}" text-anchor="end">${scans.length > 1 ? d(scans[scans.length - 1]) : ''}</text></svg>`;
+}
+function vProgress() {
+  const sc = data.scans;
+  if (!sc.length) return `<div class="empty">${ic('chart')}<h2>Your first scan will show here after you finish one</h2><button class="btn primary" data-act="goto" data-tab="scan">Take a scan</button></div>`;
+  const first = sc[0].overall, last = sc[sc.length - 1].overall;
+  const sum = sc.length === 1 ? 'One scan so far. Scan again in a week or two to see a trend.' : Math.abs(last - first) < 0.5 ? `About the same across ${sc.length} scans (${fmt(first)} to ${fmt(last)}).` : `Overall went from ${fmt(first)} to ${fmt(last)} across ${sc.length} scans.`;
+  return `<div class="stack"><h2>Progress</h2>${badges()}<div class="card">${chartSvg(sc)}<p class="sub">${esc(sum)}</p></div>
+    <h2>Your scans</h2><div class="group">${[...sc].reverse().map(s => `<button class="item" data-act="open" data-id="${s.id}">${thumbs[s.id] ? `<img class="thumb" alt="" src="${thumbs[s.id]}">` : '<span class="thumb"></span>'}
+      <span class="t"><b>${fmt(s.overall)} · ${esc(scoreWord(s.overall))}${s.sample ? ' · Sample' : ''}</b><span>${esc(new Date(s.t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }))}</span></span></button>`).join('')}</div></div>`;
+}
+function vChat() {
+  const c = ui.chat, msgs = data.chat;
+  return `<div class="stack"><h2>Ask about your scan</h2>
+    ${!latest() ? '<p class="note">Do a scan first so I can answer about your results. You can still ask general skin-care questions.</p>' : ''}
+    ${!settings.key ? '<div class="banner"><span>Add your Gemini key in Settings to chat.</span><button class="btn primary sm" data-act="settings">Open Settings</button></div>' : ''}
+    <div class="chat" aria-live="polite">${msgs.length ? msgs.map(m => `<div class="bub ${m.role === 'user' ? 'u' : 'a'}">${esc(m.text)}</div>${m.role === 'assistant' ? (m.reported ? '<span class="sub">Reported, thanks.</span>' : `<button class="linkbtn" data-act="report" data-id="${m.id}">Report this reply</button>`) : ''}`).join('')
+      : '<p class="sub">Try: "Why is my texture score lower?" or "What should I change first?"</p>'}
+      ${c.busy ? '<div class="bub a row" role="status"><span class="spin"></span><span class="sub">Thinking…</span></div>' : ''}</div>
+    ${c.error ? `<div class="banner" role="alert"><span>${esc(c.error)}</span></div>` : ''}
+    <p class="sub">AI can be wrong. Not medical advice.</p>
+    <form id="chat-form" class="row" style="flex-wrap:nowrap;align-items:flex-end"><label class="sr" for="chat-in">Message</label>
+      <textarea class="field" id="chat-in" rows="1" maxlength="2000" placeholder="Ask about your scan" style="resize:none"></textarea>
+      <button class="btn primary" style="min-width:48px;padding:0" aria-label="Send" ${(c.busy || !settings.key) ? 'disabled' : ''}>${ic('send')}</button></form>
+    ${msgs.length ? '<button class="btn ghost sm" data-act="clearchat">Clear chat</button>' : ''}</div>`;
+}
+function vSettings() {
+  const s = ui.settings;
+  return `<div class="stack"><h2>Gemini key</h2>
+    <p class="sub">Get a free key at aistudio.google.com (Get API key). Paste it here once. It is stored only on this phone and sent only to Google.</p>
+    <div><label class="l" for="s-key">API key</label><div class="row" style="flex-wrap:nowrap"><input class="field" id="s-key" type="${s.show ? 'text' : 'password'}" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(settings.key)}" placeholder="Paste your key">
+      <button class="btn secondary sm" data-act="showkey" aria-pressed="${s.show}">${s.show ? 'Hide' : 'Show'}</button></div></div>
+    <div><label class="l" for="s-model">Model (leave empty to pick automatically)</label><input class="field" id="s-model" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(settings.model)}" placeholder="chosen automatically"></div>
+    ${s.msg ? `<div class="banner ${s.msg.ok ? 'ok' : ''}" role="status"><span>${esc(s.msg.text)}</span></div>` : ''}
+    <button class="btn primary block" data-act="savekey" ${s.checking ? 'disabled' : ''}>${s.checking ? 'Checking…' : 'Save and check key'}</button>
+    <h2>About you (optional)</h2><p class="sub">Helps tailor the routine. Sent to Gemini with your photo.</p>
+    <div><label class="l" for="s-goals">Goals</label><input class="field" id="s-goals" value="${esc(settings.goals)}" placeholder="e.g. clearer skin, less shine"></div>
+    <div><label class="l" for="s-skin">Skin type</label><select class="field" id="s-skin">${['', 'dry', 'oily', 'combination', 'normal', 'sensitive'].map(o => `<option value="${o}" ${settings.skin === o ? 'selected' : ''}>${o || 'Not sure'}</option>`).join('')}</select></div>
+    <button class="btn secondary block" data-act="saveprofile">Save</button>
+    <h2>Your data</h2>
+    <p class="${persistent ? 'sub' : 'banner'}">${persistent ? 'Saved on this phone, in this browser.' : 'This browser is not letting the app save data (private window?). Results will be lost when you close the page.'}</p>
+    <button class="btn secondary block" data-act="export">Export my data (text file)</button>
+    <button class="btn secondary block" data-act="sample">Add a sample scan to look around</button>
+    ${ui.confirm === 'wipe' ? `<div class="banner"><b>Delete everything?</b><span>This removes all scans, photos, progress and chat from this phone. Your key stays.</span><div class="row"><button class="btn danger" data-act="wipe">Yes, delete everything</button><button class="btn ghost" data-act="cancel">Cancel</button></div></div>`
+      : '<button class="btn danger block" data-act="askwipe">Delete all my data</button>'}
+    <p class="sub">Cosmetic scores are an opinion about one photo and are not medical advice.</p></div>`;
+}
+const TABS = [['scan', 'Scan', 'camera'], ['routine', 'Routine', 'check'], ['plan', 'Plan', 'target'], ['progress', 'Progress', 'chart'], ['chat', 'Chat', 'chat']];
+function render() {
+  const app = $('#app'), keepFocus = document.activeElement && document.activeElement.id;
+  let title, body, back = false;
+  if (ui.view === 'settings') { title = 'Settings'; body = vSettings(); back = true; }
+  else if (ui.view === 'results') { title = 'Your scan'; body = vResults(scanById(ui.viewId)); back = true; }
+  else { title = { scan: 'Scan Log', routine: 'Routine', plan: 'Plan', progress: 'Progress', chat: 'Chat' }[ui.tab]; body = { scan: vScan, routine: vRoutine, plan: vPlan, progress: vProgress, chat: vChat }[ui.tab](); }
+  const today = dayKey(), open = (data.checks[today] || []).length === 0 && !!latest();
+  app.innerHTML = `${header(title, back, ui.view === 'settings')}<main id="main">${body}</main>
+    <nav class="tabs" aria-label="Main"><div class="in" role="tablist">${TABS.map(([id, n, i]) => `<button class="tab" role="tab" aria-selected="${!ui.view && ui.tab === id}" data-act="tab" data-tab="${id}">${ic(i)}${n}${id === 'routine' && open ? '<i class="dot" title="Routine not started today"></i>' : ''}</button>`).join('')}</div></nav>`;
+  if (keepFocus && $('#' + keepFocus)) { const el = $('#' + keepFocus); try { el.focus(); } catch { } }
+  const live = $('#live'); live.textContent = title;
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', async ev => {
+  const b = ev.target.closest('[data-act]'); if (!b) return;
+  const a = b.dataset.act, id = b.dataset.id, today = dayKey();
+  switch (a) {
+    case 'tab': ui.tab = b.dataset.tab; ui.view = null; ui.confirm = null; break;
+    case 'goto': ui.tab = b.dataset.tab; ui.view = null; break;
+    case 'settings': ui.view = 'settings'; ui.confirm = null; break;
+    case 'back': ui.view = null; ui.confirm = null; break;
+    case 'open': ui.view = 'results'; ui.viewId = id; break;
+    case 'showside': ui.flow.showSide = true; break;
+    case 'rmside': ui.flow.side = null; ui.flow.showSide = false; break;
+    case 'analyse': return runScan();
+    case 'tick': { const l = data.checks[today] = data.checks[today] || []; const i = l.indexOf(id); if (i >= 0) l.splice(i, 1); else l.push(id); await saveData(); break; }
+    case 'quest': if (completeQuest(data, id, today)) { await saveData(); toast('Quest done. +10 xp'); } break;
+    case 'plan': data.planStatus[id] = data.planStatus[id] === 'done' ? 'todo' : 'done'; await saveData(); break;
+    case 'askdel': ui.confirm = 'del:' + id; break;
+    case 'cancel': ui.confirm = null; break;
+    case 'delscan': {
+      const i = data.scans.findIndex(s => s.id === id); if (i >= 0) data.scans.splice(i, 1);
+      delete photos[id]; delete thumbs[id]; await kvDel('photo:' + id); await kvDel('thumb:' + id);
+      Object.keys(data.quests).forEach(k => { data.quests[k] = data.quests[k].filter(q => !q.planKey.startsWith(id + ':')); });
+      ensureQuests(data, latest(), today); await saveData(); ui.view = null; ui.confirm = null; ui.tab = 'progress'; break; }
+    case 'showkey': { const k = $('#s-key'); settings.key = k ? k.value.trim() : settings.key; ui.settings.show = !ui.settings.show; break; }
+    case 'savekey': return checkKey($('#s-key').value.trim(), $('#s-model').value.trim());
+    case 'saveprofile': settings.goals = $('#s-goals').value.trim().slice(0, 200); settings.skin = $('#s-skin').value; saveSettings(); toast('Saved'); break;
+    case 'report': { const m = data.chat.find(x => x.id === id); if (m) m.reported = true; await saveData(); break; }
+    case 'clearchat': data.chat = []; await saveData(); break;
+    case 'sample': return loadSample();
+    case 'export': {
+      const blob = new Blob([JSON.stringify({ exported: new Date().toISOString(), scans: data.scans, progress: data.progress, chat: data.chat }, null, 2)], { type: 'application/json' });
+      const u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = 'scan-log-export.json'; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 2000); return; }
+    case 'askwipe': ui.confirm = 'wipe'; break;
+    case 'wipe': await kvClear(); data = blankData(); Object.keys(photos).forEach(k => delete photos[k]); Object.keys(thumbs).forEach(k => delete thumbs[k]); ui.confirm = null; ui.view = null; ui.tab = 'scan'; toast('All data deleted'); break;
+  }
+  render();
+});
+document.addEventListener('change', ev => { const f = ev.target.closest('[data-file]'); if (f && f.files[0]) { onFile(f.dataset.file, f.files[0]); f.value = ''; } });
+document.addEventListener('submit', ev => { if (ev.target.id === 'chat-form') { ev.preventDefault(); const i = $('#chat-in'), t = i.value; i.value = ''; sendChat(t); } });
+document.addEventListener('keydown', ev => { if (ev.target.id === 'chat-in' && ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); $('#chat-form').requestSubmit(); } });
+window.addEventListener('unhandledrejection', () => toast('Something went wrong. Please try again.'));
+
+/* ---------- boot ---------- */
+async function boot() {
+  try { settings = { ...settings, ...JSON.parse(LS.get('scanlog.settings') || '{}') }; } catch { }
+  await openDb();
+  try {
+    const d = await kvGet('data'); if (d) data = { ...blankData(), ...d };
+    for (const s of data.scans) { photos[s.id] = await kvGet('photo:' + s.id); thumbs[s.id] = await kvGet('thumb:' + s.id); }
+    if (ensureQuests(data, latest(), dayKey())) await saveData();
+  } catch (e) { data = blankData(); }
+  render();
+  if ('serviceWorker' in navigator && /^https:$|^http:$/.test(location.protocol) && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => { });
+}
+window.__app = { parseResult, pickModel, applyActivity, currentStreak, ensureQuests, completeQuest, levelFor, dayKey, addDays, scoreWord, sampleJson, buildPrompt, SCHEMA, get data() { return data; }, get settings() { return settings; } };
+boot();
+</script>
+</body>
+</html>
